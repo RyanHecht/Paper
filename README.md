@@ -1,5 +1,7 @@
 This repo houses backported Paper patches made for MCParks
 
+1.12.2 changes can be found on the branch `mcparks/1.12.1`
+
 Paper [![Build Status](https://papermc.io/ci/job/Paper-1.14/badge/icon)](https://papermc.io/ci/job/Paper-1.14/)
 ===========
 
