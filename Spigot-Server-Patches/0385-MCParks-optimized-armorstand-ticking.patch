@@ -1,0 +1,321 @@
+From 583666963647f1e720828ed6fb6c6eb4e6dea04c Mon Sep 17 00:00:00 2001
+From: Ryan Hecht <ryanhecht.tse@gmail.com>
+Date: Sun, 1 Mar 2020 15:46:06 -0500
+Subject: [PATCH] MCParks optimized armorstand ticking
+
+
+diff --git a/src/main/java/net/minecraft/server/EntityArmorStand.java b/src/main/java/net/minecraft/server/EntityArmorStand.java
+index 90749924..cdef28d9 100644
+--- a/src/main/java/net/minecraft/server/EntityArmorStand.java
++++ b/src/main/java/net/minecraft/server/EntityArmorStand.java
+@@ -53,10 +53,19 @@ public class EntityArmorStand extends EntityLiving {
+     public boolean canMove = true; // Paper
+     public boolean canTick = true; // Paper - armour stand ticking
+ 
++    // MCParks start
++    public boolean canTickSetByAPI = false;
++    private boolean noTickPoseDirty = false;
++    private boolean noTickEquipmentDirty = false;
++    // MCParks end
++
+     public EntityArmorStand(World world) {
+         super(world);
+         this.by = NonNullList.a(2, ItemStack.a);
+         this.bz = NonNullList.a(4, ItemStack.a);
++
++        this.noTickEquipmentDirty = true; // MCParks
++
+         this.headPose = EntityArmorStand.br;
+         this.bodyPose = EntityArmorStand.bs;
+         this.leftArmPose = EntityArmorStand.bt;
+@@ -137,6 +146,7 @@ public class EntityArmorStand extends EntityLiving {
+             this.a_(itemstack);
+             this.bz.set(enumitemslot.b(), itemstack);
+         }
++        this.noTickEquipmentDirty = true; // MCParks
+ 
+     }
+ 
+@@ -213,7 +223,7 @@ public class EntityArmorStand extends EntityLiving {
+         }
+ 
+         nbttagcompound.set("Pose", this.C());
+-        nbttagcompound.setBoolean("Paper.CanTick", this.canTick); // Paper - persist no tick setting
++        if (this.canTickSetByAPI) nbttagcompound.setBoolean("Paper.CanTickOverride", this.canTick); // Paper - persist no tick setting MCPARKS EDITED
+     }
+ 
+     public void a(NBTTagCompound nbttagcompound) {
+@@ -227,6 +237,8 @@ public class EntityArmorStand extends EntityLiving {
+             for (i = 0; i < this.bz.size(); ++i) {
+                 this.bz.set(i, new ItemStack(nbttaglist.get(i)));
+             }
++
++            this.noTickEquipmentDirty = true; // MCParks
+         }
+ 
+         if (nbttagcompound.hasKeyOfType("HandItems", 9)) {
+@@ -235,6 +247,8 @@ public class EntityArmorStand extends EntityLiving {
+             for (i = 0; i < this.by.size(); ++i) {
+                 this.by.set(i, new ItemStack(nbttaglist.get(i)));
+             }
++
++            this.noTickEquipmentDirty = true; // MCParks
+         }
+ 
+         this.setInvisible(nbttagcompound.getBoolean("Invisible"));
+@@ -245,9 +259,10 @@ public class EntityArmorStand extends EntityLiving {
+         this.setMarker(nbttagcompound.getBoolean("Marker"));
+         this.bC = !this.isMarker();
+         this.noclip = this.isNoGravity();
+-        // Paper - persist no tick
+-        if (nbttagcompound.hasKey("Paper.CanTick")) {
+-            this.canTick = nbttagcompound.getBoolean("Paper.CanTick");
++        // Paper - persist no tick MCPARKS EDITED
++        if (nbttagcompound.hasKey("Paper.CanTickOverride")) {
++            this.canTick = nbttagcompound.getBoolean("Paper.CanTickOverride");
++            this.canTickSetByAPI = true;
+         }
+         NBTTagCompound nbttagcompound1 = nbttagcompound.getCompound("Pose");
+ 
+@@ -527,6 +542,7 @@ public class EntityArmorStand extends EntityLiving {
+             if (!itemstack.isEmpty()) {
+                 drops.add(org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(itemstack)); // CraftBukkit - add to drops
+                 this.by.set(i, ItemStack.a);
++                this.noTickEquipmentDirty = true;
+             }
+         }
+ 
+@@ -535,6 +551,7 @@ public class EntityArmorStand extends EntityLiving {
+             if (!itemstack.isEmpty()) {
+                 drops.add(org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(itemstack)); // CraftBukkit - add to drops
+                 this.bz.set(i, ItemStack.a);
++                this.noTickEquipmentDirty = true;
+             }
+         }
+ 
+@@ -575,8 +592,29 @@ public class EntityArmorStand extends EntityLiving {
+     }
+ 
+     public void B_() {
+-        if (!this.canTick) return;// Paper
++        // MCParks start
++        if (!this.canTick) {
++            if (this.noTickPoseDirty) {
++                this.noTickPoseDirty = false;
++                this.updatePose();
++            }
++
++            if (this.noTickEquipmentDirty) {
++                this.noTickEquipmentDirty = false;
++                this.updateEntityEquipment();
++            }
++
++            return;
++        }
++        // MCParks end
++
+         super.B_();
++
++        updatePose();
++
++    }
++
++    public void updatePose() {
+         Vector3f vector3f = (Vector3f) this.datawatcher.get(EntityArmorStand.b);
+ 
+         if (!this.headPose.equals(vector3f)) {
+@@ -620,7 +658,6 @@ public class EntityArmorStand extends EntityLiving {
+             this.i = !flag;
+             this.bC = flag;
+         }
+-
+     }
+ 
+     private void a(boolean flag) {
+@@ -706,31 +743,37 @@ public class EntityArmorStand extends EntityLiving {
+     public void setHeadPose(Vector3f vector3f) {
+         this.headPose = vector3f;
+         this.datawatcher.set(EntityArmorStand.b, vector3f);
++        this.noTickPoseDirty = true; // MCParks
+     }
+ 
+     public void setBodyPose(Vector3f vector3f) {
+         this.bodyPose = vector3f;
+         this.datawatcher.set(EntityArmorStand.c, vector3f);
++        this.noTickPoseDirty = true; // MCParks
+     }
+ 
+     public void setLeftArmPose(Vector3f vector3f) {
+         this.leftArmPose = vector3f;
+         this.datawatcher.set(EntityArmorStand.d, vector3f);
++        this.noTickPoseDirty = true; // MCParks
+     }
+ 
+     public void setRightArmPose(Vector3f vector3f) {
+         this.rightArmPose = vector3f;
+         this.datawatcher.set(EntityArmorStand.e, vector3f);
++        this.noTickPoseDirty = true; // MCParks
+     }
+ 
+     public void setLeftLegPose(Vector3f vector3f) {
+         this.leftLegPose = vector3f;
+         this.datawatcher.set(EntityArmorStand.f, vector3f);
++        this.noTickPoseDirty = true; // MCParks
+     }
+ 
+     public void setRightLegPose(Vector3f vector3f) {
+         this.rightLegPose = vector3f;
+         this.datawatcher.set(EntityArmorStand.g, vector3f);
++        this.noTickPoseDirty = true; // MCParks
+     }
+ 
+     public Vector3f u() {
+diff --git a/src/main/java/net/minecraft/server/EntityLiving.java b/src/main/java/net/minecraft/server/EntityLiving.java
+index 82c3a84e..942e4d08 100644
+--- a/src/main/java/net/minecraft/server/EntityLiving.java
++++ b/src/main/java/net/minecraft/server/EntityLiving.java
+@@ -1958,55 +1958,7 @@ public abstract class EntityLiving extends Entity {
+                 }
+             }
+ 
+-            EnumItemSlot[] aenumitemslot = EnumItemSlot.values();
+-            int j = aenumitemslot.length;
+-
+-            for (int k = 0; k < j; ++k) {
+-                EnumItemSlot enumitemslot = aenumitemslot[k];
+-                ItemStack itemstack;
+-
+-                switch (enumitemslot.a()) {
+-                case HAND:
+-                    itemstack = (ItemStack) this.bv.get(enumitemslot.b());
+-                    break;
+-
+-                case ARMOR:
+-                    itemstack = (ItemStack) this.bw.get(enumitemslot.b());
+-                    break;
+-
+-                default:
+-                    continue;
+-                }
+-
+-                ItemStack itemstack1 = this.getEquipment(enumitemslot);
+-
+-                if (!ItemStack.matches(itemstack1, itemstack)) {
+-                    // Paper start - PlayerArmorChangeEvent
+-                    if (this instanceof EntityPlayer && enumitemslot.getType() == EnumItemSlot.Function.ARMOR) {
+-                        final org.bukkit.inventory.ItemStack oldItem = CraftItemStack.asBukkitCopy(itemstack);
+-                        final org.bukkit.inventory.ItemStack newItem = CraftItemStack.asBukkitCopy(itemstack1);
+-                        new PlayerArmorChangeEvent((Player) this.getBukkitEntity(), PlayerArmorChangeEvent.SlotType.valueOf(enumitemslot.name()), oldItem, newItem).callEvent();
+-                    }
+-                    // Paper end
+-                    ((WorldServer) this.world).getTracker().a((Entity) this, (Packet) (new PacketPlayOutEntityEquipment(this.getId(), enumitemslot, itemstack1)));
+-                    if (!itemstack.isEmpty()) {
+-                        this.getAttributeMap().a(itemstack.a(enumitemslot));
+-                    }
+-
+-                    if (!itemstack1.isEmpty()) {
+-                        this.getAttributeMap().b(itemstack1.a(enumitemslot));
+-                    }
+-
+-                    switch (enumitemslot.a()) {
+-                    case HAND:
+-                        this.bv.set(enumitemslot.b(), itemstack1.isEmpty() ? ItemStack.a : itemstack1.cloneItemStack());
+-                        break;
+-
+-                    case ARMOR:
+-                        this.bw.set(enumitemslot.b(), itemstack1.isEmpty() ? ItemStack.a : itemstack1.cloneItemStack());
+-                    }
+-                }
+-            }
++            updateEntityEquipment();
+ 
+             if (this.ticksLived % 20 == 0) {
+                 this.getCombatTracker().g();
+@@ -2099,6 +2051,60 @@ public abstract class EntityLiving extends Entity {
+         }
+     }
+ 
++    // MCParks start
++    public void updateEntityEquipment() {
++        EnumItemSlot[] aenumitemslot = EnumItemSlot.values();
++        int j = aenumitemslot.length;
++
++        for (int k = 0; k < j; ++k) {
++            EnumItemSlot enumitemslot = aenumitemslot[k];
++            ItemStack itemstack;
++
++            switch (enumitemslot.a()) {
++                case HAND:
++                    itemstack = (ItemStack) this.bv.get(enumitemslot.b());
++                    break;
++
++                case ARMOR:
++                    itemstack = (ItemStack) this.bw.get(enumitemslot.b());
++                    break;
++
++                default:
++                    continue;
++            }
++
++            ItemStack itemstack1 = this.getEquipment(enumitemslot);
++
++            if (!ItemStack.matches(itemstack1, itemstack)) {
++                // Paper start - PlayerArmorChangeEvent
++                if (this instanceof EntityPlayer && enumitemslot.getType() == EnumItemSlot.Function.ARMOR) {
++                    final org.bukkit.inventory.ItemStack oldItem = CraftItemStack.asBukkitCopy(itemstack);
++                    final org.bukkit.inventory.ItemStack newItem = CraftItemStack.asBukkitCopy(itemstack1);
++                    new PlayerArmorChangeEvent((Player) this.getBukkitEntity(), PlayerArmorChangeEvent.SlotType.valueOf(enumitemslot.name()), oldItem, newItem).callEvent();
++                }
++                // Paper end
++                ((WorldServer) this.world).getTracker().a((Entity) this, (Packet) (new PacketPlayOutEntityEquipment(this.getId(), enumitemslot, itemstack1)));
++                if (!itemstack.isEmpty()) {
++                    this.getAttributeMap().a(itemstack.a(enumitemslot));
++                }
++
++                if (!itemstack1.isEmpty()) {
++                    this.getAttributeMap().b(itemstack1.a(enumitemslot));
++                }
++
++                switch (enumitemslot.a()) {
++                    case HAND:
++                        this.bv.set(enumitemslot.b(), itemstack1.isEmpty() ? ItemStack.a : itemstack1.cloneItemStack());
++                        break;
++
++                    case ARMOR:
++                        this.bw.set(enumitemslot.b(), itemstack1.isEmpty() ? ItemStack.a : itemstack1.cloneItemStack());
++                }
++            }
++        }
++    }
++    // MCParks end
++
+     protected float g(float f, float f1) {
+         float f2 = MathHelper.g(f - this.aN);
+ 
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftArmorStand.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftArmorStand.java
+index 91b7bc2e..20012be6 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftArmorStand.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftArmorStand.java
+@@ -14,6 +14,19 @@ public class CraftArmorStand extends CraftLivingEntity implements ArmorStand {
+         super(server, entity);
+     }
+ 
++    // MCParks start
++    @Override
++    public boolean canTick() {
++        return this.getHandle().canTick;
++    }
++
++    @Override
++    public void setCanTick(final boolean tick) {
++        this.getHandle().canTick = tick;
++        this.getHandle().canTickSetByAPI = true;
++    }
++    // MCParks end
++
+     @Override
+     public String toString() {
+         return "CraftArmorStand";
+-- 
+2.11.0
+

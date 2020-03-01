@@ -1,4 +1,4 @@
-From bf38aff997d53e25de73849488a72a7422f36b97 Mon Sep 17 00:00:00 2001
+From d1e4bb49259e23d828f54a0304d880947188935e Mon Sep 17 00:00:00 2001
 From: Aikar <aikar@aikar.co>
 Date: Fri, 1 Apr 2016 00:02:47 -0400
 Subject: [PATCH] add Trove and FastUtil to Bukkit
@@ -8,11 +8,10 @@ diff --git a/pom.xml b/pom.xml
 index 3889d668..c5b3f430 100644
 --- a/pom.xml
 +++ b/pom.xml
-@@ -44,6 +44,19 @@
-     </repositories>
+@@ -45,6 +45,19 @@
  
      <dependencies>
-+        <dependency>
+         <dependency>
 +            <groupId>net.sf.trove4j</groupId>
 +            <artifactId>trove4j</artifactId>
 +            <version>3.0.3</version>
@@ -25,9 +24,10 @@ index 3889d668..c5b3f430 100644
 +            <version>1.0</version>
 +            <scope>provided</scope>
 +        </dependency>
-         <dependency>
++        <dependency>
              <groupId>commons-lang</groupId>
              <artifactId>commons-lang</artifactId>
+             <version>2.6</version>
 -- 
-2.19.0
+2.11.0
 
