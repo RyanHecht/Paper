@@ -1,0 +1,33 @@
+From d58850926f2cccbb4febdb055da546efb9fc7b79 Mon Sep 17 00:00:00 2001
+From: Ryan Hecht <ryanhecht.tse@gmail.com>
+Date: Sun, 1 Mar 2020 15:56:07 -0500
+Subject: [PATCH] Removed changes I shouldn't have added
+
+
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftArmorStand.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftArmorStand.java
+index 20012be6..91b7bc2e 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftArmorStand.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftArmorStand.java
+@@ -14,19 +14,6 @@ public class CraftArmorStand extends CraftLivingEntity implements ArmorStand {
+         super(server, entity);
+     }
+ 
+-    // MCParks start
+-    @Override
+-    public boolean canTick() {
+-        return this.getHandle().canTick;
+-    }
+-
+-    @Override
+-    public void setCanTick(final boolean tick) {
+-        this.getHandle().canTick = tick;
+-        this.getHandle().canTickSetByAPI = true;
+-    }
+-    // MCParks end
+-
+     @Override
+     public String toString() {
+         return "CraftArmorStand";
+-- 
+2.11.0
+
